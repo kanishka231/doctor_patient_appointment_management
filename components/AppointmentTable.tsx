@@ -1,10 +1,12 @@
 "use client";
-import React, { useState } from 'react';
-import { Card, Button, Table, Space } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Button, Table, Space, message } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from "axios";
 import { useAuth } from '@/app/context/AuthContext';
 import dynamic from 'next/dynamic';
+import SearchBar from '@/components/Searchbar';
+import dayjs from 'dayjs';
 
 const AppointmentForm = dynamic(() => import('@/components/AppoinmentForm'), {
   ssr: false
@@ -12,7 +14,7 @@ const AppointmentForm = dynamic(() => import('@/components/AppoinmentForm'), {
 
 // Date formatting function
 const formatDate = (dateString: string) => {
-  return dateString ? new Date(dateString).toLocaleDateString() : '-';
+  return dateString ? dayjs(dateString).format('YYYY-MM-DD HH:mm') : '-';
 };
 
 export default function AppointmentTable() {
@@ -26,6 +28,19 @@ export default function AppointmentTable() {
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<any>(null);
+  const [filteredAppointments, setFilteredAppointments] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+  const [sortedInfo, setSortedInfo] = useState<any>({});
+
+  useEffect(() => {
+    const filtered = appointments.filter((appointment: any) =>
+      Object.values(appointment).some((value) =>
+        String(value).toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+    setFilteredAppointments(filtered);
+  }, [appointments, searchTerm]);
 
   // Create Appointment Handler
   const handleCreateAppointment = async (appointmentData: any) => {
@@ -39,8 +54,10 @@ export default function AppointmentTable() {
 
       fetchAppointments();
       setIsCreateModalOpen(false);
+      message.success('Appointment created successfully');
     } catch (error) {
       console.error("Error creating appointment:", error);
+      message.error('Failed to create appointment');
     }
   };
 
@@ -63,8 +80,10 @@ export default function AppointmentTable() {
 
       fetchAppointments();
       setEditingAppointment(null);
+      message.success('Appointment updated successfully');
     } catch (error) {
       console.error("Error updating appointment:", error);
+      message.error('Failed to update appointment');
     }
   };
 
@@ -80,13 +99,15 @@ export default function AppointmentTable() {
       });
 
       fetchAppointments();
+      message.success('Appointment deleted successfully');
     } catch (error) {
       console.error("Error deleting appointment:", error);
+      message.error('Failed to delete appointment');
     }
   };
 
   // Transform appointments with formatted date
-  const transformedAppointments = appointments.map((appointment:any) => ({
+  const transformedAppointments = filteredAppointments.map((appointment:any) => ({
     ...appointment,
     formattedDate: formatDate(appointment.date)
   }));
@@ -97,21 +118,29 @@ export default function AppointmentTable() {
       title: 'Patient Name',
       dataIndex: 'patientName',
       key: 'patientName',
+      sorter: (a: any, b: any) => a.patientName.localeCompare(b.patientName),
+      sortOrder: sortedInfo.columnKey === 'patientName' && sortedInfo.order,
     },
     {
       title: 'Date',
       dataIndex: 'formattedDate',
       key: 'formattedDate',
+      sorter: (a: any, b: any) => dayjs(a.date).unix() - dayjs(b.date).unix(),
+      sortOrder: sortedInfo.columnKey === 'formattedDate' && sortedInfo.order,
     },
     {
       title: 'Type',
       dataIndex: 'type',
       key: 'type',
+      sorter: (a: any, b: any) => a.type.localeCompare(b.type),
+      sortOrder: sortedInfo.columnKey === 'type' && sortedInfo.order,
     },
     {
       title: 'Doctor',
       dataIndex: 'doctorName',
       key: 'doctorName',
+      sorter: (a: any, b: any) => a.doctorName.localeCompare(b.doctorName),
+      sortOrder: sortedInfo.columnKey === 'doctorName' && sortedInfo.order,
     },
     {
       title: 'Actions',
@@ -136,6 +165,11 @@ export default function AppointmentTable() {
     },
   ];
 
+  const handleTableChange = (pagination: any, filters: any, sorter: any) => {
+    setPagination(pagination);
+    setSortedInfo(sorter);
+  };
+
   // Loading state
   if (loading) {
     return <div>Loading...</div>;
@@ -154,10 +188,13 @@ export default function AppointmentTable() {
         </Button>
       }
     >
+      <SearchBar onSearch={setSearchTerm} />
       <Table 
         columns={columns} 
         dataSource={transformedAppointments} 
         rowKey="_id"
+        pagination={pagination}
+        onChange={handleTableChange}
         locale={{ emptyText: 'No appointments available' }}
       />
 
@@ -186,3 +223,4 @@ export default function AppointmentTable() {
     </Card>
   );
 }
+
