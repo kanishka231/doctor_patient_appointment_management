@@ -74,7 +74,6 @@ export async function POST(req: NextRequest) {
     }
 }
 
-
 export async function DELETE(req: NextRequest) {
     const role = req.headers.get('role');
     const userId = req.headers.get('userId');
@@ -97,8 +96,6 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
-
-
 
 export async function PATCH(req: NextRequest) {
     const role = req.headers.get('role');
@@ -138,3 +135,4 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
+
