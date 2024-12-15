@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Table, Space, message, Tooltip } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Card, Button, Table, Space, message, Tooltip, Row, Col, Typography, Descriptions, Avatar } from 'antd';
+import { EditOutlined, DeleteOutlined, ArrowLeftOutlined, UserOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { useAuth } from '@/app/context/AuthContext';
 import dynamic from 'next/dynamic';
 import dayjs from 'dayjs';
+import toast from 'react-hot-toast';
 
 const AppointmentForm = dynamic(() => import('@/components/AppoinmentForm'), {
   ssr: false,
@@ -43,6 +44,9 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
   const [filteredAppointments, setFilteredAppointments] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [sortedInfo, setSortedInfo] = useState<any>({});
+  
+  // New state for patient details view
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
 
   useEffect(() => {
     const filtered = appointments.filter((appointment: any) =>
@@ -53,25 +57,33 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
     setFilteredAppointments(filtered);
   }, [appointments, searchTerm]);
 
-  // Create Appointment Handler
-  const handleCreateAppointment = async (appointmentData: any) => {
-    try {
-      await axios.post('/api/appointments', appointmentData, {
-        headers: {
-          role: session?.user?.role,
-          userId: session?.user?.id,
-        },
-      });
 
-      fetchAppointments();
-      onCloseCreateModal();
-      message.success('Appointment created successfully');
+  const handleCreateAppointment = async (appointmentData: any) => {     
+    try {       
+        // Use toast.promise to handle async operation with loading, success, and error states
+        await toast.promise(
+            axios.post("/api/appointments", appointmentData, {
+                headers: {
+                    role: session?.user?.role,
+                    userId: session?.user?.id,
+                },
+            }),
+            {
+                loading: 'Creating appointment...',
+                success: 'Appointment created successfully!',
+                error: 'Failed to create appointment. Please try again.'
+            }
+        );
+       
+        fetchAppointments();
+        onCloseCreateModal();
+      
+       
     } catch (error) {
-      console.error('Error creating appointment:', error);
-      message.error('Failed to create appointment');
-    }
-  };
-
+        // Error handling is now done by toast.promise
+        console.error('Appointment creation error:', error);
+    }   
+};   
   // Update Appointment Handler
   const handleUpdateAppointment = async (updatedData: any) => {
     try {
@@ -81,14 +93,21 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
           ...updatedData,
         },
       };
-
-      await axios.patch('/api/appointments', updateData, {
-        headers: {
-          role: session?.user?.role,
-          userId: session?.user?.id,
-        },
-      });
-
+      await toast.promise(
+         axios.patch('/api/appointments', updateData, {
+            headers: {
+              role: session?.user?.role,
+              userId: session?.user?.id,
+            },
+          }),
+    
+        {
+            loading: 'Creating appointment...',
+            success: 'Appointment update successfully!',
+            error: 'Failed to update appointment. Please try again.'
+        }
+    );
+      
       fetchAppointments();
       setEditingAppointment(null);
       message.success('Appointment updated successfully');
@@ -191,23 +210,115 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
     setSortedInfo(sorter);
   };
 
+  // Handle row click to show patient details
+  const handleRowClick = (record: any) => {
+    setSelectedPatient(record);
+  };
+
+  // Render patient details view
+  const renderPatientDetails = () => {
+    if (!selectedPatient) return null;
+
+    return (
+      <Card 
+        title={
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <Button 
+              icon={<ArrowLeftOutlined />} 
+              onClick={() => setSelectedPatient(null)}
+              style={{ marginRight: 16 }}
+            />
+            Patient Details
+          </div>
+        }
+        extra={
+          <Space>
+            <Button 
+              icon={<EditOutlined />} 
+              onClick={() => setEditingAppointment(selectedPatient)}
+            >
+              Edit Appointment
+            </Button>
+          </Space>
+        }
+      >
+        <Row gutter={24}>
+          <Col span={8}>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <Avatar 
+                size={128} 
+                icon={<UserOutlined />} 
+                style={{ backgroundColor: '#87d068' }}
+              />
+              <Typography.Title level={4} style={{ marginTop: 16 }}>
+                {selectedPatient.patientName}
+              </Typography.Title>
+            </div>
+          </Col>
+          <Col span={16}>
+            <Descriptions 
+              column={2} 
+              bordered 
+              title="Personal Information"
+            >
+              <Descriptions.Item label="Age">
+                {selectedPatient.patientAge}
+              </Descriptions.Item>
+              <Descriptions.Item label="Gender">
+                {selectedPatient.patientGender}
+              </Descriptions.Item>
+              <Descriptions.Item label="Appointment Type" span={2}>
+                {selectedPatient.type}
+              </Descriptions.Item>
+              <Descriptions.Item label="Appointment Date">
+                {formatDate(selectedPatient.date)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Appointment Time">
+                {formatTime(selectedPatient.date)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Reason for Visit" span={2}>
+                {selectedPatient.reasonForVisit}
+              </Descriptions.Item>
+              <Descriptions.Item label="Doctor" span={2}>
+                {selectedPatient.doctorName}
+              </Descriptions.Item>
+              {selectedPatient.notes && (
+                <Descriptions.Item label="Notes" span={2}>
+                  {selectedPatient.notes}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          </Col>
+        </Row>
+      </Card>
+    );
+  };
+
   // Loading state
   if (loading) {
     return <div>Loading...</div>;
   }
 
+  // Render either table or patient details
   return (
-    <Card title="Appointments" className="shadow-md">
-      <Table
-        columns={columns}
-        dataSource={transformedAppointments}
-        rowKey="_id"
-        pagination={pagination}
-        onChange={handleTableChange}
-        locale={{ emptyText: 'No appointments available' }}
-        className="w-full"
-        rowClassName={() => 'group hover:bg-gray-50 transition-colors'}
-      />
+    <Card title={selectedPatient ? "Patient Details" : "Appointments"} className="shadow-md">
+      {selectedPatient ? (
+        renderPatientDetails()
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={transformedAppointments}
+          rowKey="_id"
+          pagination={pagination}
+          onChange={handleTableChange}
+          locale={{ emptyText: 'No appointments available' }}
+          className="w-full"
+          rowClassName={() => 'group hover:bg-gray-50 transition-colors cursor-pointer'}
+          onRow={(record) => ({
+            onClick: () => handleRowClick(record),
+          })}
+        />
+      )}
 
       {isCreateModalOpen && (
         <AppointmentForm
@@ -222,7 +333,13 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
       {editingAppointment && (
         <AppointmentForm
           open={!!editingAppointment}
-          onClose={() => setEditingAppointment(null)}
+          onClose={() => {
+            setEditingAppointment(null);
+            // If we were viewing patient details, stay on the details view
+            if (selectedPatient) {
+              setSelectedPatient(null);
+            }
+          }}
           onSubmit={handleUpdateAppointment}
           initialData={editingAppointment}
           session={session}
@@ -234,4 +351,3 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
 };
 
 export default AppointmentTable;
-

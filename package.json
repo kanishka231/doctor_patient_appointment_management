@@ -24,7 +24,8 @@
     "next": "15.1.0",
     "next-auth": "^4.24.11",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.4.1"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
