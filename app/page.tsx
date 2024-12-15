@@ -1,21 +1,28 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import { useAuth } from "@/app/context/AuthContext";
 import AppointmentTable from "@/components/AppointmentTable";
 import AppointmentForm from "@/components/AppoinmentForm";
 import Sidebar from "@/components/SideBar";
 import DashboardHeader from "@/components/DashboardHeader";
 import axios from "axios";
-
+import HealthDashboardCards from '@/components/HealthDashboard';
 
 const Dashboard = () => {
-
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const {session, doctors, appointments, fetchAppointments, fetchDoctors, loading} = useAuth();
+
+  const {
+    session, 
+    doctors, 
+    appointments, 
+    fetchAppointments, 
+    loading
+  } = useAuth();
 
   // Track active item for conditional rendering
-  const [activeItem, setActiveItem] = useState("Appointments");
+  const [activeItem, setActiveItem] = useState("");
+
   const handleCreateAppointment = async (appointmentData: any) => {
     try {
       await axios.post("/api/appointments", appointmentData, {
@@ -24,18 +31,15 @@ const Dashboard = () => {
           userId: session?.user?.id,
         },
       });
-
+      
       fetchAppointments();
       setIsCreateModalOpen(false);
-      // message.success('Appointment created successfully');
+      setActiveItem("")
     } catch (error) {
       console.error("Error creating appointment:", error);
-      // message.error('Failed to create appointment');
     }
   };
 
-  // Update Appointment Handler
- 
   const handleSidebarClick = (item: string) => {
     setActiveItem(item);
     if (item === "Create Appointment") {
@@ -45,6 +49,56 @@ const Dashboard = () => {
     }
   };
 
+  // Render dashboard content based on active item and user role
+  const renderDashboardContent = () => {
+    if (activeItem === "") {
+      return (
+        <HealthDashboardCards 
+          session={session} 
+          appointments={appointments} 
+          doctors={doctors} 
+        />
+      );
+    }
+
+    if (activeItem === "Create Appointment") {
+      return (
+        <AppointmentForm
+          open={isCreateModalOpen}
+          onClose={() => {
+            setIsCreateModalOpen(false); 
+            setActiveItem(""); 
+          }}
+          
+          onSubmit={handleCreateAppointment}
+          session={session}
+          doctors={doctors}
+        />
+      );
+    }
+
+    return (
+      <AppointmentTable
+        searchTerm={searchTerm}
+        isCreateModalOpen={isCreateModalOpen}
+        onCloseCreateModal={() => setIsCreateModalOpen(false)}
+      />
+    );
+  };
+
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       {/* Sidebar */}
@@ -52,7 +106,6 @@ const Dashboard = () => {
         style={{
           backgroundColor: "#e6fff2",
           flexShrink: 0,
-         
         }}
       >
         <Sidebar activeItem={activeItem} onItemSelect={handleSidebarClick} />
@@ -81,21 +134,7 @@ const Dashboard = () => {
             padding: "24px",
           }}
         >
-          {activeItem === "Create Appointment" ? (
-            <AppointmentForm
-              open={isCreateModalOpen}
-              onClose={() => setIsCreateModalOpen(false)}
-              onSubmit={handleCreateAppointment}// Replace with real submit handler
-              session={session}
-              doctors={doctors} 
-            />
-          ) : (
-            <AppointmentTable
-              searchTerm={searchTerm}
-              isCreateModalOpen={isCreateModalOpen}
-              onCloseCreateModal={() => setIsCreateModalOpen(false)}
-            />
-          )}
+          {renderDashboardContent()}
         </div>
       </div>
     </div>
