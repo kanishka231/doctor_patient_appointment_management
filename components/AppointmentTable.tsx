@@ -1,23 +1,36 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Table, Space, message } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import axios from "axios";
+import { Card, Button, Table, Space, message, Tooltip } from 'antd';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import axios from 'axios';
 import { useAuth } from '@/app/context/AuthContext';
 import dynamic from 'next/dynamic';
-import SearchBar from '@/components/Searchbar';
 import dayjs from 'dayjs';
 
 const AppointmentForm = dynamic(() => import('@/components/AppoinmentForm'), {
-  ssr: false
+  ssr: false,
 });
 
-// Date formatting function
+// Date and time formatting functions
 const formatDate = (dateString: string) => {
-  return dateString ? dayjs(dateString).format('YYYY-MM-DD HH:mm') : '-';
+  return dateString ? dayjs(dateString).format('YYYY-MM-DD') : '-';
 };
 
-export default function AppointmentTable() {
+const formatTime = (dateString: string) => {
+  return dateString ? dayjs(dateString).format('HH:mm') : '-';
+};
+
+interface AppointmentTableProps {
+  searchTerm: string;
+  isCreateModalOpen: boolean;
+  onCloseCreateModal: () => void;
+}
+
+const AppointmentTable: React.FC<AppointmentTableProps> = ({ 
+  searchTerm, 
+  isCreateModalOpen,
+  onCloseCreateModal 
+}) => {
   const {
     session,
     doctors,
@@ -25,11 +38,9 @@ export default function AppointmentTable() {
     fetchAppointments,
     loading,
   } = useAuth();
-  
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
   const [editingAppointment, setEditingAppointment] = useState<any>(null);
   const [filteredAppointments, setFilteredAppointments] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [sortedInfo, setSortedInfo] = useState<any>({});
 
@@ -45,7 +56,7 @@ export default function AppointmentTable() {
   // Create Appointment Handler
   const handleCreateAppointment = async (appointmentData: any) => {
     try {
-      await axios.post("/api/appointments", appointmentData, {
+      await axios.post('/api/appointments', appointmentData, {
         headers: {
           role: session?.user?.role,
           userId: session?.user?.id,
@@ -53,10 +64,10 @@ export default function AppointmentTable() {
       });
 
       fetchAppointments();
-      setIsCreateModalOpen(false);
+      onCloseCreateModal();
       message.success('Appointment created successfully');
     } catch (error) {
-      console.error("Error creating appointment:", error);
+      console.error('Error creating appointment:', error);
       message.error('Failed to create appointment');
     }
   };
@@ -67,11 +78,11 @@ export default function AppointmentTable() {
       const updateData = {
         id: editingAppointment._id,
         update: {
-          ...updatedData
-        }
+          ...updatedData,
+        },
       };
 
-      await axios.patch("/api/appointments", updateData, {
+      await axios.patch('/api/appointments', updateData, {
         headers: {
           role: session?.user?.role,
           userId: session?.user?.id,
@@ -82,7 +93,7 @@ export default function AppointmentTable() {
       setEditingAppointment(null);
       message.success('Appointment updated successfully');
     } catch (error) {
-      console.error("Error updating appointment:", error);
+      console.error('Error updating appointment:', error);
       message.error('Failed to update appointment');
     }
   };
@@ -101,15 +112,16 @@ export default function AppointmentTable() {
       fetchAppointments();
       message.success('Appointment deleted successfully');
     } catch (error) {
-      console.error("Error deleting appointment:", error);
+      console.error('Error deleting appointment:', error);
       message.error('Failed to delete appointment');
     }
   };
 
-  // Transform appointments with formatted date
-  const transformedAppointments = filteredAppointments.map((appointment:any) => ({
+  // Transform appointments with formatted date and time
+  const transformedAppointments = filteredAppointments.map((appointment: any) => ({
     ...appointment,
-    formattedDate: formatDate(appointment.date)
+    formattedDate: formatDate(appointment.date),
+    formattedTime: formatTime(appointment.date),
   }));
 
   // Table columns configuration
@@ -129,6 +141,13 @@ export default function AppointmentTable() {
       sortOrder: sortedInfo.columnKey === 'formattedDate' && sortedInfo.order,
     },
     {
+      title: 'Time',
+      dataIndex: 'formattedTime',
+      key: 'formattedTime',
+      sorter: (a: any, b: any) => dayjs(a.date).unix() - dayjs(b.date).unix(),
+      sortOrder: sortedInfo.columnKey === 'formattedTime' && sortedInfo.order,
+    },
+    {
       title: 'Type',
       dataIndex: 'type',
       key: 'type',
@@ -146,20 +165,22 @@ export default function AppointmentTable() {
       title: 'Actions',
       key: 'actions',
       render: (text: any, record: any) => (
-        <Space size="middle">
-          <Button 
-            icon={<EditOutlined />} 
-            onClick={() => setEditingAppointment(record)}
-          >
-            Edit
-          </Button>
-          <Button 
-            danger 
-            icon={<DeleteOutlined />} 
-            onClick={() => handleDeleteAppointment(record._id)}
-          >
-            Delete
-          </Button>
+        <Space size="middle" className="opacity-0 transition-opacity group-hover:opacity-100">
+          <Tooltip title="Edit">
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => setEditingAppointment(record)}
+              type="text"
+            />
+          </Tooltip>
+          <Tooltip title="Delete">
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDeleteAppointment(record._id)}
+              type="text"
+            />
+          </Tooltip>
         </Space>
       ),
     },
@@ -176,40 +197,28 @@ export default function AppointmentTable() {
   }
 
   return (
-    <Card 
-      title="Appointments" 
-      extra={
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />}
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          Create Appointment
-        </Button>
-      }
-    >
-      <SearchBar onSearch={setSearchTerm} />
-      <Table 
-        columns={columns} 
-        dataSource={transformedAppointments} 
+    <Card title="Appointments" className="shadow-md">
+      <Table
+        columns={columns}
+        dataSource={transformedAppointments}
         rowKey="_id"
         pagination={pagination}
         onChange={handleTableChange}
         locale={{ emptyText: 'No appointments available' }}
+        className="w-full"
+        rowClassName={() => 'group hover:bg-gray-50 transition-colors'}
       />
 
-      {/* Create Appointment Form */}
       {isCreateModalOpen && (
         <AppointmentForm
           open={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
+          onClose={onCloseCreateModal}
           onSubmit={handleCreateAppointment}
           session={session}
           doctors={doctors}
         />
       )}
 
-      {/* Edit Appointment Form */}
       {editingAppointment && (
         <AppointmentForm
           open={!!editingAppointment}
@@ -222,5 +231,7 @@ export default function AppointmentTable() {
       )}
     </Card>
   );
-}
+};
+
+export default AppointmentTable;
 

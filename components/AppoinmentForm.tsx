@@ -1,5 +1,6 @@
 "use client";
 import React from 'react';
+import { useEffect } from 'react';
 import { Modal, Form, Input, DatePicker, Select, message } from 'antd';
 import dayjs from 'dayjs';
 
@@ -47,7 +48,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialData) {
       form.setFieldsValue({
         ...initialData,

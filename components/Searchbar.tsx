@@ -1,3 +1,4 @@
+// components/SearchBar.js
 import React from 'react';
 import { Input } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
@@ -12,7 +13,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
       placeholder="Search appointments"
       prefix={<SearchOutlined />}
       onChange={(e) => onSearch(e.target.value)}
-      style={{ width: 200, marginBottom: 16 }}
+      style={{ width: 600, marginBottom: 16 }}
     />
   );
 };

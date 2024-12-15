@@ -32,20 +32,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true); // Loading state for fetching data
 
   useEffect(() => {
-    // If session status is no longer loading and there's no session, redirect to signin
+   
     if (status !== 'loading' && !session) {
       router.push('/auth/signin');
       return;
     }
 
-    if (status === 'loading') return; // Skip if session is loading
+    if (status === 'loading') return;
     
     if (session?.user?.id) {
-      fetchDoctors(); // Fetch doctors when session is available
-      fetchAppointments(); // Fetch appointments when session is available
+      fetchDoctors(); 
+      fetchAppointments(); 
     }
     
-    setLoading(false); // Set loading to false after fetching
+    setLoading(false); 
   }, [session, status, router]);
 
   // Fetch doctors from the API
