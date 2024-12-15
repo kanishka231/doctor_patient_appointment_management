@@ -1,15 +1,13 @@
-// context/Auth
-// This directive makes the component client-side only
 "use client";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation'; // Import useRouter for navigation
 import axios from 'axios';
-
 
 // Define the context's value type
 interface AuthContextProps {
   session: any;
-  doctors:any;
+  doctors: any;
   appointments: any;
   fetchAppointments: () => void;
   fetchDoctors: () => void;
@@ -26,19 +24,29 @@ interface AuthProviderProps {
 
 // AuthProvider component
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const router = useRouter(); // Initialize router for navigation
   const { data: session, status } = useSession(); // NextAuth session
+
   const [appointments, setAppointments] = useState<any>([]); // Appointments state
   const [doctors, setDoctors] = useState<any>([]); // Doctors state
   const [loading, setLoading] = useState(true); // Loading state for fetching data
 
   useEffect(() => {
+    // If session status is no longer loading and there's no session, redirect to signin
+    if (status !== 'loading' && !session) {
+      router.push('/auth/signin');
+      return;
+    }
+
     if (status === 'loading') return; // Skip if session is loading
+    
     if (session?.user?.id) {
       fetchDoctors(); // Fetch doctors when session is available
       fetchAppointments(); // Fetch appointments when session is available
     }
+    
     setLoading(false); // Set loading to false after fetching
-  }, [session, status]);
+  }, [session, status, router]);
 
   // Fetch doctors from the API
   const fetchDoctors = async () => {
