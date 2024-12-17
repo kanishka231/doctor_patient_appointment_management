@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Table, Space, message, Tooltip, Row, Col, Typography, Descriptions, Avatar } from 'antd';
-import { EditOutlined, DeleteOutlined, ArrowLeftOutlined, UserOutlined } from '@ant-design/icons';
+import { Card, Button, Table, Space, Input, Tooltip, Row, Col, Typography, Descriptions, Avatar } from 'antd';
+import { EditOutlined, DeleteOutlined, ArrowLeftOutlined, UserOutlined, SearchOutlined, PlusOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { useAuth } from '@/app/context/AuthContext';
 import dynamic from 'next/dynamic';
@@ -22,13 +22,11 @@ const formatTime = (dateString: string) => {
 };
 
 interface AppointmentTableProps {
-  searchTerm: string;
   isCreateModalOpen: boolean;
   onCloseCreateModal: () => void;
 }
 
 const AppointmentTable: React.FC<AppointmentTableProps> = ({ 
-  searchTerm, 
   isCreateModalOpen,
   onCloseCreateModal 
 }) => {
@@ -40,6 +38,7 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
     loading,
   } = useAuth();
 
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [editingAppointment, setEditingAppointment] = useState<any>(null);
   const [filteredAppointments, setFilteredAppointments] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
@@ -57,34 +56,29 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
     setFilteredAppointments(filtered);
   }, [appointments, searchTerm]);
 
-
   const handleCreateAppointment = async (appointmentData: any) => {     
     try {       
-        // Use toast.promise to handle async operation with loading, success, and error states
-        await toast.promise(
-            axios.post("/api/appointments", appointmentData, {
-                headers: {
-                    role: session?.user?.role,
-                    userId: session?.user?.id,
-                },
-            }),
-            {
-                loading: 'Creating appointment...',
-                success: 'Appointment created successfully!',
-                error: 'Failed to create appointment. Please try again.'
-            }
-        );
+      await toast.promise(
+        axios.post("/api/appointments", appointmentData, {
+          headers: {
+            role: session?.user?.role,
+            userId: session?.user?.id,
+          },
+        }),
+        {
+          loading: 'Creating appointment...',
+          success: 'Appointment created successfully!',
+          error: 'Failed to create appointment. Please try again.'
+        }
+      );
        
-        fetchAppointments();
-        onCloseCreateModal();
-      
-       
+      fetchAppointments();
+      onCloseCreateModal();
     } catch (error) {
-        // Error handling is now done by toast.promise
-        console.error('Appointment creation error:', error);
+      console.error('Appointment creation error:', error);
     }   
-};   
-  // Update Appointment Handler
+  };   
+
   const handleUpdateAppointment = async (updatedData: any) => {
     try {
       const updateData = {
@@ -94,30 +88,26 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
         },
       };
       await toast.promise(
-         axios.patch('/api/appointments', updateData, {
-            headers: {
-              role: session?.user?.role,
-              userId: session?.user?.id,
-            },
-          }),
-    
+        axios.patch('/api/appointments', updateData, {
+          headers: {
+            role: session?.user?.role,
+            userId: session?.user?.id,
+          },
+        }),
         {
-            loading: 'Creating appointment...',
-            success: 'Appointment update successfully!',
-            error: 'Failed to update appointment. Please try again.'
+          loading: 'Updating appointment...',
+          success: 'Appointment updated successfully!',
+          error: 'Failed to update appointment. Please try again.'
         }
-    );
+      );
       
       fetchAppointments();
       setEditingAppointment(null);
-      message.success('Appointment updated successfully');
     } catch (error) {
       console.error('Error updating appointment:', error);
-      message.error('Failed to update appointment');
     }
   };
 
-  // Delete Appointment Handler
   const handleDeleteAppointment = async (appointmentId: string) => {
     try {
       await axios.delete('/api/appointments', {
@@ -129,10 +119,8 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
       });
 
       fetchAppointments();
-      message.success('Appointment deleted successfully');
     } catch (error) {
       console.error('Error deleting appointment:', error);
-      message.error('Failed to delete appointment');
     }
   };
 
@@ -210,12 +198,10 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
     setSortedInfo(sorter);
   };
 
-  // Handle row click to show patient details
   const handleRowClick = (record: any) => {
     setSelectedPatient(record);
   };
 
-  // Render patient details view
   const renderPatientDetails = () => {
     if (!selectedPatient) return null;
 
@@ -299,9 +285,25 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
     return <div>Loading...</div>;
   }
 
-  // Render either table or patient details
   return (
-    <Card title={selectedPatient ? "Patient Details" : "Appointments"} className="shadow-md">
+    <Card 
+      title={selectedPatient ? "Patient Details" : "Appointments"} 
+      className="shadow-md"
+      extra={
+        !selectedPatient && (
+          <div className="flex items-center space-x-4">
+            <Input
+              prefix={<SearchOutlined />}
+              placeholder="Search appointments"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-64"
+            />
+           
+          </div>
+        )
+      }
+    >
       {selectedPatient ? (
         renderPatientDetails()
       ) : (
@@ -335,7 +337,6 @@ const AppointmentTable: React.FC<AppointmentTableProps> = ({
           open={!!editingAppointment}
           onClose={() => {
             setEditingAppointment(null);
-            // If we were viewing patient details, stay on the details view
             if (selectedPatient) {
               setSelectedPatient(null);
             }

@@ -8,8 +8,16 @@ import {
   ClockCircleOutlined,
   SafetyOutlined
 } from '@ant-design/icons';
+import { useAuth } from '@/app/context/AuthContext';
 
-const HealthDashboardCards = ({ session, appointments, doctors }:any) => {
+const HealthDashboardCards = () => {
+    const {
+        session, 
+        doctors, 
+        appointments, 
+        fetchAppointments, 
+        loading
+      } = useAuth();
   return (
     <div style={{ 
       display: 'grid', 

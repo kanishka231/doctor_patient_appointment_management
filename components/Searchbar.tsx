@@ -11,7 +11,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch }) => {
   return (
     <Input
       placeholder="Search appointments"
-      prefix={<SearchOutlined />}
+      prefix={<SearchOutlined
+        data-testid="search-icon" />}
       onChange={(e) => onSearch(e.target.value)}
       style={{ width: 600, marginBottom: 16 }}
     />

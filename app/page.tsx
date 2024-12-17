@@ -2,115 +2,45 @@
 import React, { useState } from 'react';
 import { useAuth } from "@/app/context/AuthContext";
 import AppointmentTable from "@/components/AppointmentTable";
-import AppointmentForm from "@/components/AppoinmentForm";
 import Sidebar from "@/components/SideBar";
 import DashboardHeader from "@/components/DashboardHeader";
-import axios from "axios";
 import HealthDashboardCards from '@/components/HealthDashboard';
-import toast from 'react-hot-toast';
+import HelpAndSupport from "@/components/HelpSuport" 
+import Loading from '@/components/Loading';
 
 const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  const {
-    session, 
-    doctors, 
-    appointments, 
-    fetchAppointments, 
-    loading
-  } = useAuth();
+  const {loading} = useAuth();
 
   // Track active item for conditional rendering
-  const [activeItem, setActiveItem] = useState("");
-
-  const handleCreateAppointment = async (appointmentData: any) => {     
-    try {       
-        // Use toast.promise to handle async operation with loading, success, and error states
-        await toast.promise(
-            axios.post("/api/appointments", appointmentData, {
-                headers: {
-                    role: session?.user?.role,
-                    userId: session?.user?.id,
-                },
-            }),
-            {
-                loading: 'Creating appointment...',
-                success: 'Appointment created successfully!',
-                error: 'Failed to create appointment. Please try again.'
-            }
-        );
-        
-        // Fetch updated appointments after successful creation
-        fetchAppointments();
-        
-        // Close the modal and reset active item
-        setIsCreateModalOpen(false);
-        setActiveItem("");
-    } catch (error) {
-        // Error handling is now done by toast.promise
-        console.error('Appointment creation error:', error);
-    }   
-};    
-
-
+  const [activeItem, setActiveItem] = useState("Dashboard");
   const handleSidebarClick = (item: string) => {
     setActiveItem(item);
-    if (item === "Create Appointment") {
-      setIsCreateModalOpen(true);
-    } else {
-      setIsCreateModalOpen(false);
-    }
+    setIsCreateModalOpen(false);
   };
 
   // Render dashboard content based on active item and user role
   const renderDashboardContent = () => {
-    if (activeItem === "") {
-      return (
-        <HealthDashboardCards 
-          session={session} 
-          appointments={appointments} 
-          doctors={doctors} 
+    switch (activeItem) {
+      case "Dashboard":
+        return <HealthDashboardCards />;
+      case "Appointments":
+        return (
+          <AppointmentTable
+          isCreateModalOpen={isCreateModalOpen}
+          onCloseCreateModal={() => setIsCreateModalOpen(false)}
         />
-      );
+        );
+      case "Help":
+        return <HelpAndSupport />;
+      default:
+        return (<HealthDashboardCards />);
     }
-
-    if (activeItem === "Create Appointment") {
-      return (
-        <AppointmentForm
-          open={isCreateModalOpen}
-          onClose={() => {
-            setIsCreateModalOpen(false); 
-            setActiveItem(""); 
-          }}
-          
-          onSubmit={handleCreateAppointment}
-          session={session}
-          doctors={doctors}
-        />
-      );
-    }
-
-    return (
-      <AppointmentTable
-        searchTerm={searchTerm}
-        isCreateModalOpen={isCreateModalOpen}
-        onCloseCreateModal={() => setIsCreateModalOpen(false)}
-      />
-    );
   };
 
   if (loading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
-      }}>
-        Loading...
-      </div>
-    );
+    return <Loading />;
   }
 
   return (
@@ -122,7 +52,10 @@ const Dashboard = () => {
           flexShrink: 0,
         }}
       >
-        <Sidebar activeItem={activeItem} onItemSelect={handleSidebarClick} />
+        <Sidebar 
+          activeItem={activeItem} 
+          onItemSelect={handleSidebarClick} 
+        />
       </div>
 
       {/* Main Content */}
@@ -137,7 +70,13 @@ const Dashboard = () => {
             boxShadow: "0px 2px 4px rgba(0,0,0,0.1)",
           }}
         >
-          <DashboardHeader onSearch={setSearchTerm} />
+          <DashboardHeader 
+            onSearch={(term) => setSearchTerm(term)}
+            onAddAppointment={() => {
+              setActiveItem("Appointments");
+              setIsCreateModalOpen(true);
+            }}
+          />
         </div>
 
         {/* Content Area */}
