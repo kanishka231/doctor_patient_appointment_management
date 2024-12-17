@@ -43,8 +43,6 @@ The application supports the following roles:
 ### 2. **Appointment Management**
    - **Doctors**: 
      - Create, view, update, and delete appointments.
-   - **Patients**:
-     - View their appointments with detailed information.
    - **Admins**:
      - Manage all appointments across the platform.
    - **Details Tracked**:
